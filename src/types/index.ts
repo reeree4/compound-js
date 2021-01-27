@@ -20,6 +20,8 @@ export interface CompoundOptions {
   privateKey?: string;
   mnemonic?: string;
   provider?: Provider | string;
+  networkId?: number;
+  networkName?: string;
 }
 
 

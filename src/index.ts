@@ -8,7 +8,7 @@ import { ethers } from 'ethers';
 import * as eth from './eth';
 import * as util from './util';
 import * as comptroller from './comptroller';
-import * as cToken from './cToken';
+import * as cToken from './bToken';
 import * as priceFeed from './priceFeed';
 import * as comp from './comp';
 import * as gov from './gov';
@@ -75,9 +75,17 @@ const Compound = function(
   //     use the correct contract addresses.
   instance._networkPromise = eth.getProviderNetwork(provider).then((network) => {
     delete instance._networkPromise;
-    instance._network = network;
+    console.log('setting network...', network)
+    if (options.networkId && options.networkName) {
+      instance._network = {
+        id: options.networkId,
+        name: options.networkName
+      };
+    } else {
+      instance._network = network;
+    }
   });
-
+  console.log('reet', instance._network);
   return instance;
 };
 

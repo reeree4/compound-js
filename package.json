@@ -7,7 +7,7 @@
   "main": "dist/nodejs/index.js",
   "scripts": {
     "lint": "./node_modules/.bin/eslint ./src/*.ts",
-    "build": "npm run lint && ./node_modules/.bin/tsc && npm run rollup",
+    "build": "npm run lint && ./node_modules/.bin/tsc",
     "docs": "node ./scripts/compound-docs.js",
     "prepare": "npm run build",
     "publish_patch": "npm version patch && npm publish --access public",

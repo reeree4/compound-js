@@ -56,13 +56,16 @@ export async function supply(
   await netId(this);
   const errorPrefix = 'Compound [supply] | ';
 
-  const cTokenName = 'c' + asset;
-  const cTokenAddress = address[this._network.name][cTokenName];
+  // const cTokenName = 'c' + asset;
+  // const cTokenAddress = address[this._network.name][cTokenName];
 
-  if (!cTokenAddress || !underlyings.includes(asset)) {
-    throw Error(errorPrefix + 'Argument `asset` cannot be supplied.');
-  }
+  // if (!cTokenAddress || !underlyings.includes(asset)) {
+  //   throw Error(errorPrefix + 'Argument `asset` cannot be supplied.');
+  // }
 
+  // const underlyingAddress = address[this._network.name][asset];
+  const bTokenManagerAddress = address[this._network.name][constants.BTokenManager];
+  console.log('bTokenManagerAddress', bTokenManagerAddress)
   if (
     typeof amount !== 'number' &&
     typeof amount !== 'string' &&
@@ -73,52 +76,65 @@ export async function supply(
 
   if (!options.mantissa) {
     amount = +amount;
-    amount = amount * Math.pow(10, decimals[asset]);
+    amount = amount * Math.pow(10, 18); // TODO change this to not be hardcoded and to read from the underlying erc20! was decimals[asset]);
   }
 
   amount = ethers.BigNumber.from(amount.toString());
+  console.log('amount', amount.toString())
 
-  if (cTokenName === constants.cETH) {
-    options.abi = abi.cEther;
-  } else {
-    options.abi = abi.cErc20;
-  }
+  // if (cTokenName === constants.cETH) {
+  //   options.abi = abi.cEther;
+  // } else {
+  options.abi = abi.BTokenManager;
+  // }
 
   options._compoundProvider = this._provider;
 
-  if (cTokenName !== constants.cETH && noApprove !== true) {
+  // if (cTokenName !== constants.cETH && noApprove !== true) {
     const underlyingAddress = address[this._network.name][asset];
-    const userAddress = this._provider.address;
+    const userAddress = this._provider.address || options.from;
+
+    console.log('underlyingAddress', underlyingAddress)
+    const erc20Options = {
+      ...options,
+      abi: abi.Erc20
+    };
 
     // Check allowance
     const allowance = await eth.read(
       underlyingAddress,
       'allowance',
-      [ userAddress, cTokenAddress ],
-      options
+      [ userAddress, bTokenManagerAddress ],
+      erc20Options
     );
+    console.log('allowance', allowance.toString())
 
     const notEnough = allowance.lt(amount);
 
     if (notEnough) {
       // ERC-20 approve transaction
+      console.log('approving amount', amount)
       await eth.trx(
         underlyingAddress,
         'approve',
-        [ cTokenAddress, amount ],
-        options
+        [ bTokenManagerAddress, amount ],
+        erc20Options
       );
+      console.log('approved')
     }
-  }
 
-  const parameters = [];
-  if (cTokenName === constants.cETH) {
-    options.value = amount;
-  } else {
-    parameters.push(amount);
-  }
 
-  return eth.trx(cTokenAddress, 'mint', parameters, options);
+  const parameters = [
+    underlyingAddress,
+    amount
+  ];
+  // if (cTokenName === constants.cETH) {
+  //   options.value = amount;
+  // } else {
+    // parameters.push(amount);
+  // }
+  console.log('about to mint', parameters)
+  return eth.trx(bTokenManagerAddress, 'mint', parameters, options);
 }
 
 /**
@@ -242,13 +258,14 @@ export async function borrow(
   await netId(this);
   const errorPrefix = 'Compound [borrow] | ';
 
-  const cTokenName = 'c' + asset;
-  const cTokenAddress = address[this._network.name][cTokenName];
+  // const bTokenName = 'b' + asset;
+  const bTokenManagerAddress = address[this._network.name][constants.BTokenManager];
+  const underlyingAddress = address[this._network.name][asset];
 
-  if (!cTokenAddress || !underlyings.includes(asset)) {
-    throw Error(errorPrefix + 'Argument `asset` cannot be borrowed.');
-  }
-
+  // if (!cTokenAddress || !underlyings.includes(asset)) {
+  //   throw Error(errorPrefix + 'Argument `asset` cannot be borrowed.');
+  // }
+  console.log('in borrow', amount.toString())
   if (
     typeof amount !== 'number' &&
     typeof amount !== 'string' &&
@@ -256,22 +273,24 @@ export async function borrow(
   ) {
     throw Error(errorPrefix + 'Argument `amount` must be a string, number, or BigNumber.');
   }
-
+  console.log('ay')
   if (!options.mantissa) {
     amount = +amount;
     amount = amount * Math.pow(10, decimals[asset]);
   }
+  console.log('bee', 'amount.toString()')
 
   amount = ethers.BigNumber.from(amount.toString());
-
+  console.log('see')
   const trxOptions: CallOptions = {
     ...options,
     _compoundProvider: this._provider,
   };
-  const parameters = [ amount ];
-  trxOptions.abi = cTokenName === constants.cETH ? abi.cEther : abi.cErc20;
-
-  return eth.trx(cTokenAddress, 'borrow', parameters, trxOptions);
+  const parameters = [ underlyingAddress, amount ];
+  trxOptions.abi = abi.BTokenManager;
+  // trxOptions.abi = cTokenName === constants.cETH ? abi.cEther : abi.cErc20;
+  console.log('params', parameters)
+  return eth.trx(bTokenManagerAddress, 'borrow', parameters, trxOptions);
 }
 
 /**

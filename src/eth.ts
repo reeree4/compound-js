@@ -307,6 +307,9 @@ export function _createProvider(options: CallOptions = {}) : Provider {
     provider = new ethers.providers.Web3Provider(provider).getSigner();
   } else {
     provider = new ethers.providers.JsonRpcProvider(provider);
+    if (options.from) {
+      provider = provider.getSigner(options.from);
+    }
   }
 
   // Add an explicit signer
